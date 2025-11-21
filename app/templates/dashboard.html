@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — PhishDetect{% endblock %}
+{% block content %}
+<h2 class="h-xxl">Dashboard</h2>
+<p class="lead">Scan URLs and review your recent scans</p>
+
+<div class="scan-panel" style="margin-top:18px;">
+  <div class="scan-form">
+    <div class="card">
+      <h3 class="h-lg">Scan a URL</h3>
+      <form action="{{ url_for('scan') }}" method="POST" class="form" id="scanForm">
+        <label>URL</label>
+        <input class="input" type="url" name="url" placeholder="https://example.com/login" required>
+        <div style="margin-top:8px;">
+          <button class="btn btn-primary" type="submit">Analyze</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="scan-info">
+    <div class="card">
+      <h3 class="h-lg">Your Stats</h3>
+      <p class="kicker">Total scans: <strong>{{ scan_count }}</strong></p>
+      <p class="kicker">Last scan: <strong>{{ last_scan or '—' }}</strong></p>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:20px">Scan history</h3>
+{% if history %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>URL</th><th>Result</th><th>When</th></tr></thead>
+      <tbody>
+        {% for item in history %}
+          <tr>
+            <td class="mono">{{ item.url }}</td>
+            <td>
+              {% if item.result == 'phishing' %}
+                <span class="status-pill phish">Phishing</span>
+              {% else %}
+                <span class="status-pill safe">Legit</span>
+              {% endif %}
+            </td>
+            <td>{{ item.timestamp }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty">No scans yet — try analyzing a URL above.</div>
+{% endif %}
+{% endblock %}

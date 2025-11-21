@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: phish-detect-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app.app:app --preload --bind 0.0.0.0:$PORT"
+    plan: free
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10
+
+    # allow persistent database
+    disk:
+      name: database
+      mountPath: /opt/render/project/src/database
+      sizeGB: 1

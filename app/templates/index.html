@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Home — PhishDetect{% endblock %}
+{% block content %}
+<div class="card" style="text-align:center; margin-top:18px;">
+  <h1 class="h-xxl">PhishDetect</h1>
+  <p class="lead">Quickly analyze URLs for phishing risk — ML-powered and privacy-friendly.</p>
+
+  <div style="margin-top:18px;">
+    {% if current_user.is_authenticated %}
+      <a class="btn btn-primary" href="{{ url_for('dashboard') }}">Go to Dashboard</a>
+    {% else %}
+      <a class="btn btn-primary" href="{{ url_for('signup') }}">Get Started — Free</a>
+      <a class="btn btn-ghost" href="{{ url_for('login') }}">Login</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

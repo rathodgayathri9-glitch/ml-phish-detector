@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — PhishDetect{% endblock %}
+{% block content %}
+<div class="card" style="max-width:500px;margin:30px auto;">
+  <h2 class="h-xxl">Create account</h2>
+  <p class="lead">Register to save your scans and view history</p>
+
+  <form action="{{ url_for('signup') }}" method="POST" class="form" id="signupForm">
+    <label>Username</label>
+    <input class="input" type="text" name="username" required placeholder="Your name">
+
+    <label>Email</label>
+    <input class="input" type="email" name="email" required placeholder="you@example.com">
+
+    <label>Password</label>
+    <input class="input" type="password" name="password" required placeholder="Create a password">
+
+    <button class="btn btn-primary" type="submit" style="width:100%;">Sign Up</button>
+  </form>
+
+  <p style="text-align:center; margin-top:12px;">
+    <a class="link-muted" href="{{ url_for('login') }}">Already have an account? Login</a>
+  </p>
+</div>
+{% endblock %}

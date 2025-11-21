@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}500 — Server error{% endblock %}
+{% block content %}
+<div class="card" style="text-align:center">
+  <h2>500 — Something went wrong</h2>
+  <p class="lead">An internal error occurred. Try again later.</p>
+  {% if error %}
+    <pre style="margin-top:12px;background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;color:#ffb6b6;overflow:auto;">{{ error }}</pre>
+  {% endif %}
+  <a class="btn" href="{{ url_for('index') }}">Return home</a>
+</div>
+{% endblock %}

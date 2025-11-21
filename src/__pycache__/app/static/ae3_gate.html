@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AE3-GATE Demo — Run in Chrome</title>
+<style>
+  :root{
+    --bg:#071027; --card:#0f1b2b; --accent:#39b6ff; --muted:#9fb0c8;
+    --good:#22c55e; --bad:#ef4444; --glass: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+    background:linear-gradient(180deg,var(--bg),#021026); color:#e6f0fb;
+    display:flex; align-items:flex-start; justify-content:center; padding:32px 16px;
+  }
+  .container{width:100%;max-width:980px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .logo{
+    width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7ce0ff);
+    display:flex;align-items:center;justify-content:center;color:#022; font-weight:700; font-size:18px;
+  }
+  h1{font-size:20px;margin:0}
+  p.lead{margin:6px 0 0;color:var(--muted);font-size:13px}
+
+  .grid{display:grid;grid-template-columns:1fr 420px;gap:18px}
+  .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(2,8,23,0.6);}
+
+  .controls input[type="text"]{
+    width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);
+    background:var(--glass); color:inherit; outline:none; font-size:15px;
+  }
+  .row{display:flex;gap:8px;margin-top:12px}
+  button{background:var(--accent);border:none;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer;color:#021826}
+  button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .result-big{display:flex;align-items:center;gap:12px}
+  .meter{width:120px;height:120px;border-radius:999px;background:linear-gradient(180deg,#06293e,#07283b);
+         display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(255,255,255,0.03)}
+  .status{font-size:16px;font-weight:700}
+  .safe{color:var(--good)} .phish{color:var(--bad)}
+
+  .mini{font-size:13px;color:var(--muted);margin-top:8px}
+  .features{margin-top:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .feat{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:13px}
+  .explain{margin-top:12px;background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;font-size:14px}
+
+  .graph-wrap{height:360px;display:flex;flex-direction:column;gap:10px}
+  svg{width:100%;height:100%;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));}
+
+  footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+  @media(max-width:980px){ .grid{grid-template-columns:1fr} .graph-wrap{height:260px} }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">AE3</div>
+    <div>
+      <h1>AE3-GATE — Phishing Detection (Chrome Demo)</h1>
+      <p class="lead">Frontend demo — no server connection, runs locally in the browser</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <div class="controls">
+        <label for="url">Website URL</label>
+        <input id="url" type="text" placeholder="https://example.com/login" />
+        <div class="row">
+          <button id="analyzeBtn">Analyze</button>
+          <button class="secondary" id="randomBtn">Try random test</button>
+          <button class="secondary" id="clearBtn">Clear</button>
+        </div>
+
+        <div id="result" style="display:none;margin-top:14px">
+          <div class="result-big">
+            <div class="meter" id="meter">--</div>
+            <div>
+              <div class="status" id="status">Waiting</div>
+              <div class="mini" id="confidenceText"></div>
+              <div class="mini" id="latencyText"></div>
+            </div>
+          </div>
+          <div class="features" id="featuresBox"></div>
+          <div class="explain" id="explainBox"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:700">Graph-Attentive Visualization</div>
+        <div style="color:var(--muted);font-size:13px">Simulated attention weights</div>
+      </div>
+      <div class="graph-wrap">
+        <svg id="graphSvg" viewBox="0 0 600 360" preserveAspectRatio="xMidYMid meet"></svg>
+        <div style="font-size:13px;color:var(--muted)">
+          Nodes represent page/domain elements. Node size/glow ≈ attention weight.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Tip: To connect to a backend later, replace <code>simulatePredict()</code> with an API call.
+  </footer>
+</div>
+
+<script>
+/* Utilities */
+function nowMs(){return performance.now();}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+/* Feature extraction (browser mock) */
+function extractFeatures(url){
+  try{
+    const u=new URL(url);
+    const hostname=u.hostname;
+    const pathname=u.pathname;
+    const hasHttps=u.protocol==="https:";
+    const parts=hostname.split('.');
+    const subdomainCount=Math.max(0, parts.length - 2);
+    const length=url.length;
+    const hasAt=url.includes('@');
+    const hasIP=!!hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
+    const suspiciousWords=["login","signin","secure","update","verify","account","bank"];
+    const wordHits=suspiciousWords.filter(w=>url.toLowerCase().includes(w)).length;
+    const dots=(url.match(/\./g)||[]).length;
+    const queryLen=u.search.length;
+    const fakeDomainAgeDays=Math.max(1,Math.round((parts.join('').length+Math.random()*50)/3));
+    return {hostname,pathname,hasHttps,subdomainCount,length,hasAt,hasIP,wordHits,dots,queryLen,fakeDomainAgeDays};
+  }catch(e){
+    const s=url||"";
+    return {hostname:s,pathname:"/",hasHttps:false,subdomainCount:0,length:s.length,hasAt:s.includes("@"),hasIP:false,wordHits:0,dots:(s.match(/\./g)||[]).length,queryLen:0,fakeDomainAgeDays:1};
+  }
+}
+
+/* Simulated predictor (frontend demo) */
+function simulatePredict(f){
+  let score=0.05;
+  score+=Math.min(0.5,f.wordHits*0.12);
+  if(f.hasAt)score+=0.18;
+  if(f.hasIP)score+=0.18;
+  if(!f.hasHttps)score+=0.12;
+  if(f.fakeDomainAgeDays<14)score+=0.18;
+  if(f.subdomainCount>=2)score+=0.08;
+  score+=Math.min(0.08,(f.queryLen/40));
+  score=Math.min(0.99,Math.max(0.01,score+(Math.random()-0.45)*0.06));
+
+  const base={
+    domain:0.15+(f.fakeDomainAgeDays<14?0.25:0),
+    page:0.10+(f.wordHits>0?0.22:0),
+    script:0.10+(f.dots>5?0.08:0),
+    form:0.06+(f.wordHits>0||f.queryLen>0?0.25:0),
+    external_link:0.08+(f.subdomainCount>1?0.15:0)
+  };
+  // normalize with small randomness
+  let sum=Object.values(base).reduce((a,b)=>a+b,0);
+  const att={};
+  for(const k in base){
+    att[k]=Math.max(0, ((base[k]/sum) + (Math.random()-0.45)*0.03));
+  }
+  sum=Object.values(att).reduce((a,b)=>a+b,0);
+  for(const k in att) att[k]=Math.round((att[k]/sum)*100)/100;
+
+  const exp=[];
+  if(f.fakeDomainAgeDays<14)exp.push("Recent domain registration (simulated)");
+  if(!f.hasHttps)exp.push("Missing or non-HTTPS connection");
+  if(f.hasIP)exp.push("URL uses raw IP address");
+  if(f.wordHits>0)exp.push("Suspicious keywords in path");
+  if(f.hasAt)exp.push("Use of '@' in URL");
+  if(exp.length===0)exp.push("No immediate indicators detected (low risk)");
+
+  return {score:score, attention:att, explanation:exp};
+}
+
+/* Draw graph visualization (SVG) */
+function drawGraph(svgEl, attention){
+  svgEl.innerHTML='';
+  const w=600,h=360,cx=w/2,cy=h/2,r=Math.min(w,h)/3;
+  const nodes=[
+    {id:"domain"},{id:"page"},{id:"script"},{id:"form"},{id:"external_link"}
+  ];
+  nodes.forEach((n,i)=>{
+    const ang=(i/nodes.length)*Math.PI*2-Math.PI/2;
+    n.x=Math.round(cx+r*Math.cos(ang));
+    n.y=Math.round(cy+r*Math.sin(ang));
+  });
+
+  const edges=[
+    {from:"domain",to:"page"},{from:"page",to:"form"},{from:"page",to:"script"},
+    {from:"script",to:"external_link"},{from:"form",to:"external_link"}
+  ];
+  edges.forEach(e=>{
+    const a=nodes.find(n=>n.id===e.from);
+    const b=nodes.find(n=>n.id===e.to);
+    const line=document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1",a.x);line.setAttribute("y1",a.y);
+    line.setAttribute("x2",b.x);line.setAttribute("y2",b.y);
+    line.setAttribute("stroke","rgba(255,255,255,0.06)");
+    line.setAttribute("stroke-width","2");
+    svgEl.appendChild(line);
+  });
+
+  nodes.forEach(n=>{
+    const att=attention[n.id]||0.05;
+    const radius=18+att*42;
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+
+    const glow=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    glow.setAttribute("cx",n.x);glow.setAttribute("cy",n.y);glow.setAttribute("r",radius*1.6);
+    glow.setAttribute("fill","none");
+    glow.setAttribute("stroke",att>0.18?"rgba(239,68,68,0.18)":"rgba(57,182,255,0.12)");
+    glow.setAttribute("stroke-width",Math.max(6,att*26));
+    g.appendChild(glow);
+
+    const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx",n.x);c.setAttribute("cy",n.y);c.setAttribute("r",radius);
+    c.setAttribute("fill",att>0.18?"rgba(239,68,68,0.95)":"rgba(57,182,255,0.95)");
+    g.appendChild(c);
+
+    const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x",n.x);t.setAttribute("y",n.y+4);
+    t.setAttribute("text-anchor","middle");
+    t.setAttribute("font-size","11");
+    t.setAttribute("fill","#021826");
+    t.setAttribute("font-weight","700");
+    t.textContent=n.id;
+    g.appendChild(t);
+
+    const attT=document.createElementNS("http://www.w3.org/2000/svg","text");
+    attT.setAttribute("x",n.x);attT.setAttribute("y",n.y+radius+14);
+    attT.setAttribute("text-anchor","middle");
+    attT.setAttribute("font-size","11");
+    attT.setAttribute("fill","#9fb0c8");
+    attT.textContent = `${Math.round((att||0)*100)}%`;
+    g.appendChild(attT);
+
+    svgEl.appendChild(g);
+  });
+}
+
+/* DOM refs */
+const analyzeBtn=document.getElementById('analyzeBtn');
+const randomBtn=document.getElementById('randomBtn');
+const clearBtn=document.getElementById('clearBtn');
+const urlInput=document.getElementById('url');
+const resultDiv=document.getElementById('result');
+const meter=document.getElementById('meter');
+const statusText=document.getElementById('status');
+const confidenceText=document.getElementById('confidenceText');
+const latencyText=document.getElementById('latencyText');
+const featuresBox=document.getElementById('featuresBox');
+const explainBox=document.getElementById('explainBox');
+const svg=document.getElementById('graphSvg');
+
+analyzeBtn.onclick=async()=>{
+  const url=urlInput.value.trim();
+  if(!url){alert('Please enter a URL to analyze.');return;}
+  await runAnalysis(url);
+};
+randomBtn.onclick=async()=>{
+  const samples=[
+    "https://secure-bank-login.com/verify",
+    "http://192.168.0.45/login",
+    "https://example.com/",
+    "https://accounts.google.com/signin",
+    "https://my-bank.example.com/update-info"
+  ];
+  const pick=samples[Math.floor(Math.random()*samples.length)];
+  urlInput.value=pick;
+  await runAnalysis(pick);
+};
+clearBtn.onclick=()=>{
+  urlInput.value='';
+  resultDiv.style.display='none';
+  svg.innerHTML='';
+  statusText.textContent='Waiting';
+  meter.textContent='--';
+  confidenceText.textContent='';
+  latencyText.textContent='';
+  featuresBox.innerHTML='';
+  explainBox.innerHTML='';
+};
+
+async function runAnalysis(url){
+  resultDiv.style.display='block';
+  statusText.textContent='Analyzing...';
+  meter.textContent='...';
+  confidenceText.textContent='';
+  latencyText.textContent='';
+
+  const t0=nowMs();
+  const f=extractFeatures(url);
+  // simulate small delay like network + inference
+  await sleep(350+Math.random()*300);
+  const pred=simulatePredict(f);
+  const t1=nowMs();
+  const ms=Math.round(t1-t0);
+  const conf=Math.round(pred.score*100);
+
+  // meter content
+  meter.innerHTML = `<div style="text-align:center"><div style="font-size:20px;font-weight:800">${conf}%</div><div style="font-size:11px;color:var(--muted)">${pred.score>0.6 ? 'phishing' : 'risk'}</div></div>`;
+
+  statusText.textContent = pred.score>0.6 ? '⚠ Phishing Detected' : '✅ Likely Safe';
+  statusText.className = pred.score>0.6 ? 'phish' : 'safe';
+  confidenceText.textContent = `Confidence: ${(pred.score*100).toFixed(1)}%`;
+  latencyText.textContent = `Inference: ${ms} ms (simulated)`;
+
+  // feature list
+  featuresBox.innerHTML = '';
+  const items=[
+    {k:'Hostname',v:f.hostname},{k:'Path',v:f.pathname},{k:'HTTPS',v:f.hasHttps?'Yes':'No'},
+    {k:'# Subdomains',v:f.subdomainCount},{k:'URL length',v:f.length},{k:'Suspicious words',v:f.wordHits},
+    {k:'Uses @',v:f.hasAt?'Yes':'No'},{k:'Uses IP',v:f.hasIP?'Yes':'No'},
+    {k:'Query length',v:f.queryLen},{k:'Domain age (days)',v:f.fakeDomainAgeDays}
+  ];
+  items.forEach(it=>{
+    const el=document.createElement('div');el.className='feat';
+    el.innerHTML = `<b>${it.k}</b><div style="color:var(--muted);margin-top:6px">${it.v}</div>`;
+    featuresBox.appendChild(el);
+  });
+
+  // explanation
+  explainBox.innerHTML = `<b>Top indicators:</b><ul style="margin:8px 0 0 18px;color:var(--muted)">${pred.explanation.map(s=>`<li>${s}</li>`).join('')}</ul>`;
+
+  // draw graph
+  drawGraph(svg, pred.attention);
+}
+
+/* on load - prefill example */
+window.addEventListener('load',()=>{ urlInput.value="https://secure-bank-login.example.com/verify"; });
+</script>
+</body>
+</html>

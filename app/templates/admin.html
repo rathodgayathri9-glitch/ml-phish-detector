@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Admin — PhishDetect{% endblock %}
+{% block content %}
+<h2 class="h-xxl">Admin Panel</h2>
+
+<div class="card" style="margin-top:12px;">
+  <h3 class="h-lg">Users</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>ID</th><th>Username</th><th>Email</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+          <tr><td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.email }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:18px;">
+  <h3 class="h-lg">Recent Scans</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>ID</th><th>User</th><th>URL</th><th>Result</th><th>Time</th></tr></thead>
+      <tbody>
+        {% for s in scans %}
+          <tr>
+            <td>{{ s.id }}</td><td>{{ s.user_id }}</td><td class="mono">{{ s.url }}</td><td>{{ s.result }}</td><td>{{ s.scanned_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

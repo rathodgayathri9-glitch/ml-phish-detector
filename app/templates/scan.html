@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Scan URL — PhishDetect{% endblock %}
+{% block content %}
+<div class="card" style="max-width:700px;margin:22px auto;">
+  <h2 class="h-xxl">Scan a URL</h2>
+  <p class="lead">Paste any URL to check if it's suspicious.</p>
+
+  <form action="{{ url_for('scan') }}" method="POST" class="form">
+    <input class="input" type="url" name="url" placeholder="https://example.com" required>
+    <button class="btn btn-primary" type="submit">Analyze</button>
+  </form>
+</div>
+{% endblock %}

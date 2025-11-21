@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}PhishDetect{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='main.js') }}"></script>
+</head>
+<body class="{% if session.get('theme') == 'dark' %}dark{% endif %}">
+  <nav class="nav">
+    <div class="nav-left">
+      <a class="brand" href="{{ url_for('index') }}">
+        <div class="logo">PD</div>
+        <span>PhishDetect</span>
+      </a>
+    </div>
+
+    <div class="nav-actions">
+      {% if current_user.is_authenticated %}
+        <span class="nav-user">Hello, {{ current_user.username }}</span>
+        <a class="btn btn-ghost" href="{{ url_for('logout') }}">Logout</a>
+      {% else %}
+        <a class="btn btn-primary" href="{{ url_for('login') }}">Login</a>
+        <a class="btn btn-ghost" href="{{ url_for('signup') }}">Sign Up</a>
+      {% endif %}
+      <form id="themeToggleForm" action="{{ url_for('toggle_theme') }}" method="POST" style="display:inline;">
+        <button class="btn btn-ghost" type="submit" title="Toggle theme">🌙</button>
+      </form>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="container fade-in">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-area">
+            {% for category, msg in messages %}
+              <div class="flash {{ category }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">© 2025 PhishDetect — All Rights Reserved</div>
+  </footer>
+</body>
+</html>
